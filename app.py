@@ -30,8 +30,8 @@ from hx_simulator.two_phase import (
 matplotlib.rcParams["mathtext.fontset"] = "cm"
 
 st.set_page_config(
-    page_title="HX Simulator",
-    page_icon="\U0001f525",
+    page_title="HX Simulator — Industrial Heat Exchanger Design",
+    page_icon="favicon.ico",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -39,67 +39,282 @@ st.set_page_config(
 
 DARK_CSS = """
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 :root {
-    --hx-bg: #0e1117;
-    --hx-bg2: #141820;
-    --hx-card: rgba(255,255,255,0.04);
-    --hx-card-border: rgba(255,255,255,0.08);
-    --hx-text: #e0e0e0;
-    --hx-text-dim: #999;
-    --hx-grid: #333;
-    --hx-sidebar: #12151c;
-    --hx-divider: rgba(128,128,128,0.2);
+    --bg-primary: #0a0e17;
+    --bg-secondary: #111827;
+    --bg-card: rgba(17,24,39,0.7);
+    --bg-card-hover: rgba(30,41,59,0.8);
+    --bg-glass: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --border-accent: rgba(99,102,241,0.3);
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent: #6366f1;
+    --accent-glow: rgba(99,102,241,0.15);
+    --hot: #f43f5e;
+    --hot-glow: rgba(244,63,94,0.12);
+    --cold: #3b82f6;
+    --cold-glow: rgba(59,130,246,0.12);
+    --success: #10b981;
+    --warning: #f59e0b;
+    --purple: #a78bfa;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.3);
+    --shadow-lg: 0 8px 40px rgba(0,0,0,0.4);
 }
+
+/* ── Global ── */
 .stApp, .main .block-container {
-    background: var(--hx-bg) !important;
-    color: var(--hx-text) !important;
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    font-family: 'Inter', system-ui, sans-serif !important;
 }
 section[data-testid="stSidebar"] > div {
-    background: var(--hx-sidebar) !important;
+    background: var(--bg-secondary) !important;
+    border-right: 1px solid var(--border) !important;
 }
+[data-testid="stSidebar"] .stMarkdown p,
+[data-testid="stSidebar"] .stMarkdown li,
+[data-testid="stSidebar"] .stCaption,
+[data-testid="stSidebar"] label {
+    color: var(--text-secondary) !important;
+}
+
+/* ── Typography ── */
+h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+    color: var(--text-primary) !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+}
+
+/* ── Metric Cards (Glassmorphism) ── */
 div[data-testid="stMetric"] {
-    background: var(--hx-card) !important;
-    border: 1px solid var(--hx-card-border);
-    border-radius: 10px;
-    padding: 12px 14px;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    background: var(--bg-glass) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+    padding: 16px 18px !important;
+    transition: all 0.25s cubic-bezier(0.4,0,0.2,1) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
 }
 div[data-testid="stMetric"]:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-color: var(--border-accent) !important;
+    box-shadow: 0 4px 20px rgba(99,102,241,0.1) !important;
+    transform: translateY(-2px) !important;
 }
 div[data-testid="stMetricValue"] {
-    font-size: 1.1rem !important;
-    font-weight: 600;
+    font-size: 1.2rem !important;
+    font-weight: 700 !important;
+    color: var(--text-primary) !important;
+    letter-spacing: -0.01em !important;
 }
 div[data-testid="stMetricLabel"] {
-    font-size: 0.78rem !important;
-    opacity: 0.8;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
 }
+
+/* ── Badges ── */
 .hx-badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 16px;
-    font-size: 0.78rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.72rem;
     font-weight: 600;
-    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
-.hx-hot   { background: rgba(255,107,107,0.15); color: #ff6b6b; border: 1px solid rgba(255,107,107,0.3); }
-.hx-cold  { background: rgba(66,165,245,0.15);  color: #42a5f5; border: 1px solid rgba(66,165,245,0.3); }
-.hx-ok    { background: rgba(0,200,83,0.15);    color: #00c855; border: 1px solid rgba(0,200,83,0.3); }
-.hx-warn  { background: rgba(255,165,0,0.15);   color: #ffa500; border: 1px solid rgba(255,165,0,0.3); }
-.hx-info  { background: rgba(156,39,176,0.12);  color: #ba68c8; border: 1px solid rgba(156,39,176,0.25); }
+.hx-hot {
+    background: var(--hot-glow);
+    color: var(--hot);
+    border: 1px solid rgba(244,63,94,0.2);
+}
+.hx-cold {
+    background: var(--cold-glow);
+    color: var(--cold);
+    border: 1px solid rgba(59,130,246,0.2);
+}
+.hx-ok {
+    background: rgba(16,185,129,0.1);
+    color: var(--success);
+    border: 1px solid rgba(16,185,129,0.2);
+}
+.hx-warn {
+    background: rgba(245,158,11,0.1);
+    color: var(--warning);
+    border: 1px solid rgba(245,158,11,0.2);
+}
+.hx-info {
+    background: rgba(167,139,250,0.1);
+    color: var(--purple);
+    border: 1px solid rgba(167,139,250,0.2);
+}
+
+/* ── SVG Viz Box ── */
 .hx-viz-box {
-    background: var(--hx-bg2);
-    border: 1px solid var(--hx-card-border);
-    border-radius: 12px;
-    padding: 8px;
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+/* ── Tabs ── */
+button[role="tab"] {
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0 !important;
+    padding: 8px 16px !important;
+    transition: all 0.2s ease !important;
+}
+button[role="tab"][aria-selected="true"] {
+    border-bottom: 2px solid var(--accent) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ── Code blocks ── */
+.stCode code {
+    border-radius: var(--radius-sm) !important;
+    font-size: 0.8rem !important;
+    background: rgba(0,0,0,0.3) !important;
+    border: 1px solid var(--border) !important;
+}
+
+/* ── Dividers ── */
+hr {
+    border: none !important;
+    border-top: 1px solid var(--border) !important;
+    margin: 1rem 0 !important;
+}
+
+/* ── Alerts ── */
+.stAlert {
+    border-radius: var(--radius) !important;
+    border: 1px solid var(--border) !important;
+    backdrop-filter: blur(8px);
+}
+
+/* ── Buttons ── */
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    border: none !important;
+    border-radius: var(--radius-sm) !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.02em !important;
+    box-shadow: 0 4px 16px rgba(99,102,241,0.3) !important;
+    transition: all 0.25s ease !important;
+}
+.stButton > button[kind="primary"]:hover {
+    box-shadow: 0 6px 24px rgba(99,102,241,0.4) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* ── Select boxes / Inputs ── */
+.stSelectbox, .stNumberInput, .stRadio, .stToggle {
+    font-size: 0.88rem !important;
+}
+
+/* ── Expander ── */
+details {
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
     overflow: hidden;
 }
-button[role="tab"] { font-size: 0.85rem; }
-.stCode code { border-radius: 8px !important; font-size: 0.82rem !important; }
-hr { border: none; border-top: 1px solid var(--hx-divider); margin: 0.8rem 0; }
-.stAlert { border-radius: 8px !important; }
+details summary {
+    font-weight: 600 !important;
+    color: var(--text-secondary) !important;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* ── Hero Header ── */
+.hx-hero {
+    background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.05) 50%, rgba(59,130,246,0.08) 100%);
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius);
+    padding: 24px 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+.hx-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%);
+    pointer-events: none;
+}
+.hx-hero h1 {
+    font-size: 1.8rem !important;
+    font-weight: 800 !important;
+    background: linear-gradient(135deg, #f1f5f9, #94a3b8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 4px !important;
+}
+.hx-hero p {
+    color: var(--text-muted) !important;
+    font-size: 0.88rem !important;
+    margin: 0 !important;
+}
+
+/* ── Section Headers ── */
+.hx-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+.hx-section h3 {
+    margin: 0 !important;
+    font-size: 1rem !important;
+}
+
+/* ── Status Pill ── */
+.hx-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+.hx-status-ok {
+    background: rgba(16,185,129,0.1);
+    color: var(--success);
+    border: 1px solid rgba(16,185,129,0.2);
+}
+.hx-status-warn {
+    background: rgba(245,158,11,0.1);
+    color: var(--warning);
+    border: 1px solid rgba(245,158,11,0.2);
+}
+.hx-status-err {
+    background: rgba(244,63,94,0.1);
+    color: var(--hot);
+    border: 1px solid rgba(244,63,94,0.2);
+}
 </style>
 """
 st.markdown(DARK_CSS, unsafe_allow_html=True)
@@ -380,28 +595,43 @@ def build_fluid(prefix, key_suffix):
 
 
 with st.sidebar:
-    st.markdown("# \U0001f525 HX Simulator")
-    st.caption("Heat Exchanger Thermal Design Tool")
+    st.markdown("""
+    <div style="padding:4px 0 8px 0;">
+        <div style="font-size:1.4rem;font-weight:800;letter-spacing:-0.03em;
+                     background:linear-gradient(135deg,#6366f1,#a78bfa);
+                     -webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+            🔥 HX Simulator
+        </div>
+        <div style="font-size:0.78rem;color:#64748b;margin-top:2px;">
+            Industrial Heat Exchanger Design Tool
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # How to Use button
+    if st.button("📖 How to Use", use_container_width=True, key="how_to_use"):
+        st.session_state.show_howto = True
+
     st.divider()
 
     mode = st.radio(
-        "Operating Mode",
+        "⚙️ Operating Mode",
         ["Rating (Analysis)", "Design (Sizing)"],
-        help="Rating: given geometry. Design: given temps.",
+        help="Rating: given geometry → find performance. Design: given temps → find required area.",
     )
     mode_key = "rating" if "Rating" in mode else "design"
 
     arrangement = st.radio(
-        "Flow Arrangement", ["Counter-flow", "Parallel-flow"], horizontal=True
+        "🔄 Flow Arrangement", ["Counter-flow", "Parallel-flow"], horizontal=True
     )
     arr_key = "counter" if "Counter" in arrangement else "parallel"
 
     st.divider()
     hx_type = st.radio(
-        "HX Type", ["Double-pipe", "Shell-and-tube"], horizontal=True
+        "🏗️ HX Type", ["Double-pipe", "Shell-and-tube"], horizontal=True
     )
 
-    fouling_key = st.selectbox("Fouling Condition", list(FF.keys()), index=0)
+    fouling_key = st.selectbox("🧪 Fouling Condition", list(FF.keys()), index=0)
 
     with st.expander("Fouling Info", expanded=False):
         for key, desc in FOULING_DESCRIPTIONS.items():
@@ -506,8 +736,77 @@ with st.sidebar:
 """)
 
 
-st.markdown("# Heat Exchanger Simulator")
-st.caption("Double-pipe & shell-and-tube | Rating & Design | LMTD & epsilon-NTU")
+# ── How to Use Popup (on first load) ──
+if "show_howto" not in st.session_state:
+    st.session_state.show_howto = True  # show on first visit
+
+if st.session_state.get("show_howto", False):
+    HOWTO_CSS = """
+    <style>
+    .howto-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+        z-index: 9998; display: flex; align-items: center; justify-content: center;
+    }
+    .howto-card {
+        background: #111827; border: 1px solid rgba(99,102,241,0.3);
+        border-radius: 16px; padding: 32px; max-width: 620px; width: 90%;
+        box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+        font-family: 'Inter', system-ui, sans-serif; color: #f1f5f9;
+    }
+    .howto-card h2 { margin: 0 0 16px 0; font-size: 1.3rem; font-weight: 800;
+        background: linear-gradient(135deg,#6366f1,#a78bfa);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .howto-card ol { padding-left: 20px; line-height: 1.9; font-size: 0.88rem; color: #94a3b8; }
+    .howto-card li { margin-bottom: 6px; }
+    .howto-card li strong { color: #f1f5f9; }
+    .howto-card .step-num {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 22px; height: 22px; border-radius: 50%;
+        background: rgba(99,102,241,0.15); color: #a78bfa;
+        font-size: 0.72rem; font-weight: 700; margin-right: 6px;
+    }
+    .howto-card a { color: #818cf8; text-decoration: none; }
+    .howto-card a:hover { text-decoration: underline; }
+    .howto-card .dismiss-btn {
+        display: inline-block; margin-top: 20px; padding: 8px 24px;
+        background: linear-gradient(135deg,#6366f1,#8b5cf6);
+        border: none; border-radius: 8px; color: white; font-weight: 600;
+        cursor: pointer; font-size: 0.85rem;
+    }
+    </style>
+    """
+    st.markdown(HOWTO_CSS, unsafe_allow_html=True)
+    st.markdown("""
+    <div class="howto-overlay" id="howto-overlay">
+        <div class="howto-card">
+            <h2>📖 How to Use HX Simulator</h2>
+            <ol>
+                <li><span class="step-num">1</span> <strong>Choose mode</strong> in the sidebar — <em>Rating</em> (analyze existing HX) or <em>Design</em> (size a new HX)</li>
+                <li><span class="step-num">2</span> <strong>Select HX type</strong> — Double-pipe or Shell-and-tube</li>
+                <li><span class="step-num">3</span> <strong>Set hot & cold fluids</strong> — pick from built-in fluids (water, air, oil) or define custom properties</li>
+                <li><span class="step-num">4</span> <strong>Enter geometry</strong> — tube diameters, length, number of tubes, baffle settings (shell-and-tube)</li>
+                <li><span class="step-num">5</span> <strong>Click "Run Simulation"</strong> — results appear instantly with animated HX visualization</li>
+                <li><span class="step-num">6</span> <strong>Explore tabs</strong> — Temperatures, Heat Transfer, Pressure Drop, FIV, Cost, Fouling, Nozzles, Charts, Export</li>
+            </ol>
+            <p style="font-size:0.8rem;color:#64748b;margin-top:12px;">
+                Full source verification and references available in the sidebar →
+                <a href="https://github.com/dadhichmohak/hxsimulator" target="_blank">GitHub Repo</a>
+            </p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("Got it", key="dismiss_howto"):
+        st.session_state.show_howto = False
+        st.rerun()
+
+# ── Hero Header ──
+st.markdown("""
+<div class="hx-hero">
+    <h1>Heat Exchanger Simulator</h1>
+    <p>Double-pipe & Shell-and-tube &nbsp;|&nbsp; Rating & Design &nbsp;|&nbsp; Bell-Delaware &nbsp;|&nbsp; FIV &nbsp;|&nbsp; Two-Phase &nbsp;|&nbsp; Cost Analysis</p>
+</div>
+""", unsafe_allow_html=True)
 
 col_hot, col_cold = st.columns(2)
 with col_hot:
