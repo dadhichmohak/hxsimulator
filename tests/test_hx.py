@@ -15,6 +15,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from hx_simulator.utils import (
     Re_D, Re_D_from_mdot, Nu_D, Pr, LMTD,
     epsilon_NTU_counterflow, epsilon_NTU_parallel, epsilon_NTU_phase_change,
+    epsilon_NTU_shell_tube, NTU_from_epsilon_shell_tube,
+    epsilon_NTU_crossflow_both_unmixed, epsilon_NTU_crossflow_one_mixed,
+    NTU_from_epsilon_crossflow_one_mixed,
     NTU_from_epsilon_counterflow, heat_capacity_rate, q_max, check_convergence,
 )
 from hx_simulator.fluids import get_properties, make_custom_fluid, get_h_fg_water
@@ -135,6 +138,75 @@ class TestEpsilonNTU:
             assert abs(NTU_recovered - NTU_true) < 1e-6, (
                 f"Round-trip failed: NTU_true={NTU_true}, recovered={NTU_recovered}"
             )
+
+    def test_shell_tube_known(self):
+        """Shell-and-tube (1 shell, 2+ tube) with Cr=0.5, NTU=2."""
+        eps = epsilon_NTU_shell_tube(2.0, 0.5)
+        # Should be between parallel and counter-flow
+        eps_par = epsilon_NTU_parallel(2.0, 0.5)
+        eps_cnt = epsilon_NTU_counterflow(2.0, 0.5)
+        assert eps_par < eps < eps_cnt, (
+            f"Shell-tube eps={eps:.4f} not between parallel={eps_par:.4f} and counter={eps_cnt:.4f}"
+        )
+
+    def test_shell_tube_Cr0(self):
+        """Shell-and-tube with Cr=0 should match phase-change formula."""
+        eps = epsilon_NTU_shell_tube(2.0, 0.0)
+        expected = epsilon_NTU_phase_change(2.0)
+        assert abs(eps - expected) < 1e-10
+
+    def test_invert_shell_tube(self):
+        """Round-trip NTU from ε for shell-and-tube."""
+        for NTU_true in [0.5, 1.0, 2.0, 3.0]:
+            Cr_val = 0.5
+            eps = epsilon_NTU_shell_tube(NTU_true, Cr_val)
+            NTU_recovered = NTU_from_epsilon_shell_tube(eps, Cr_val)
+            assert abs(NTU_recovered - NTU_true) < 1e-6, (
+                f"Shell-tube round-trip failed: NTU_true={NTU_true}, recovered={NTU_recovered}"
+            )
+
+    def test_crossflow_both_unmixed(self):
+        """Cross-flow (both unmixed) should be between parallel and counter."""
+        eps = epsilon_NTU_crossflow_both_unmixed(2.0, 0.5)
+        eps_par = epsilon_NTU_parallel(2.0, 0.5)
+        eps_cnt = epsilon_NTU_counterflow(2.0, 0.5)
+        assert eps_par < eps < eps_cnt, (
+            f"Crossflow eps={eps:.4f} not between parallel={eps_par:.4f} and counter={eps_cnt:.4f}"
+        )
+
+    def test_crossflow_one_mixed_Cr0(self):
+        """Cross-flow (one mixed) with Cr=0 should match phase-change."""
+        eps_cold = epsilon_NTU_crossflow_one_mixed(2.0, 0.0, "cold")
+        eps_hot = epsilon_NTU_crossflow_one_mixed(2.0, 0.0, "hot")
+        expected = epsilon_NTU_phase_change(2.0)
+        assert abs(eps_cold - expected) < 1e-10
+        assert abs(eps_hot - expected) < 1e-10
+
+    def test_crossflow_one_mixed_cold(self):
+        """Cross-flow (C_c mixed, C_h unmixed) with Cr=0.5, NTU=2."""
+        eps = epsilon_NTU_crossflow_one_mixed(2.0, 0.5, "cold")
+        # Should be between parallel and counter
+        eps_par = epsilon_NTU_parallel(2.0, 0.5)
+        eps_cnt = epsilon_NTU_counterflow(2.0, 0.5)
+        assert eps_par < eps < eps_cnt
+
+    def test_crossflow_one_mixed_hot(self):
+        """Cross-flow (C_h mixed, C_c unmixed) with Cr=0.5, NTU=2."""
+        eps = epsilon_NTU_crossflow_one_mixed(2.0, 0.5, "hot")
+        eps_par = epsilon_NTU_parallel(2.0, 0.5)
+        eps_cnt = epsilon_NTU_counterflow(2.0, 0.5)
+        assert eps_par < eps < eps_cnt
+
+    def test_invert_crossflow_one_mixed(self):
+        """Round-trip NTU from ε for cross-flow (one mixed)."""
+        for NTU_true in [0.5, 1.0, 2.0, 3.0]:
+            Cr_val = 0.4
+            for side in ["cold", "hot"]:
+                eps = epsilon_NTU_crossflow_one_mixed(NTU_true, Cr_val, side)
+                NTU_recovered = NTU_from_epsilon_crossflow_one_mixed(eps, Cr_val, side)
+                assert abs(NTU_recovered - NTU_true) < 1e-5, (
+                    f"Crossflow ({side}) round-trip failed: NTU_true={NTU_true}, recovered={NTU_recovered}"
+                )
 
 
 # ============================================================

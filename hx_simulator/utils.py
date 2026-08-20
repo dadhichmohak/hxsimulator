@@ -1,4 +1,11 @@
-"""Utility functions — dimensionless numbers, LMTD, convergence checks, validation."""
+"""Utility functions — dimensionless numbers, LMTD, ε-NTU, convergence, validation.
+
+ε-NTU formulas from:
+  - Incropera & DeWitt, "Fundamentals of Heat and Mass Transfer", 7th Ed., Wiley, 2011, Ch. 11
+  - Kays & London, "Compact Heat Exchangers", 2nd Ed., McGraw-Hill, 1964
+  - Kern, "Process Heat Transfer", McGraw-Hill, 1950
+  - Bowman, Mueller & Nagle, "Mean Temperature Difference in Design", Trans. ASME, 1940
+"""
 
 import math
 import warnings
@@ -138,6 +145,153 @@ def NTU_from_epsilon_parallel(epsilon: float, Cr: float) -> float:
     if arg <= 0:
         raise ValueError("Cannot invert: argument of log is non-positive.")
     return -math.log(arg) / (1.0 + Cr)
+
+
+# ---------------------------------------------------------------------------
+# Shell-and-tube ε-NTU  (ref: Incropera & DeWitt, Ch. 11, Table 11.3)
+# For 1 shell pass, 2/4/6/... tube passes (TEMA E with multi-pass tubes)
+# ---------------------------------------------------------------------------
+
+def epsilon_NTU_shell_tube(NTU: float, Cr: float) -> float:
+    """Effectiveness for shell-and-tube HX (1 shell pass, 2+ tube passes).
+
+    ε = 2 * {1 + Cr + sqrt(1+Cr^2) * [1 + exp(-NTU*sqrt(1+Cr^2))] /
+              [1 - exp(-NTU*sqrt(1+Cr^2))]}^(-1)
+
+    Ref: Incropera & DeWitt, 7th Ed., Table 11.3, Row 5.
+    Valid for Cr < 1. When Cr = 1, uses limiting form.
+    """
+    if Cr == 1.0:
+        # Limiting case for Cr → 1
+        E = math.exp(-NTU * math.sqrt(2.0))
+        return 2.0 / (1.0 + Cr + math.sqrt(1.0 + Cr**2) * (1.0 + E) / (1.0 - E))
+    sqrt_term = math.sqrt(1.0 + Cr**2)
+    exp_term = math.exp(-NTU * sqrt_term)
+    denom = 1.0 + Cr + sqrt_term * (1.0 + exp_term) / (1.0 - exp_term)
+    return 2.0 / denom
+
+
+def NTU_from_epsilon_shell_tube(epsilon: float, Cr: float) -> float:
+    """Invert shell-and-tube ε-NTU to find required NTU.
+
+    From ε = 2 / {1 + Cr + sqrt(1+Cr^2) * [1+exp(-NTU*sqrt(1+Cr^2))] /
+              [1 - exp(-NTU*sqrt(1+Cr^2))]}:
+
+    Let S = sqrt(1+Cr^2), then:
+      F = 2/ε - 1 - Cr
+      exp(-NTU*S) = (F - S) / (F + S)
+      NTU = -ln[(F-S)/(F+S)] / S
+
+    Ref: Incropera & DeWitt, 7th Ed., Table 11.3.
+    """
+    if epsilon <= 0 or epsilon >= 1:
+        raise ValueError(f"epsilon must be in (0, 1), got {epsilon}")
+    S = math.sqrt(1.0 + Cr**2)
+    F = 2.0 / epsilon - 1.0 - Cr
+    if F <= S:
+        raise ValueError("Cannot invert shell-and-tube: F <= S, epsilon too high.")
+    ratio = (F - S) / (F + S)
+    if ratio <= 0:
+        raise ValueError("Cannot invert shell-and-tube: log argument non-positive.")
+    return -math.log(ratio) / S
+
+
+# ---------------------------------------------------------------------------
+# Cross-flow ε-NTU  (ref: Incropera & DeWitt, Ch. 11, Table 11.3)
+# ---------------------------------------------------------------------------
+
+def epsilon_NTU_crossflow_both_unmixed(NTU: float, Cr: float) -> float:
+    """Effectiveness for cross-flow HX with BOTH fluids unmixed.
+
+    ε = 1 - exp[(1/Cr) * NTU^0.22 * {exp(-Cr * NTU^0.78) - 1}]
+
+    This is an approximate correlation. Exact: series solution.
+    Ref: Incropera & DeWitt, 7th Ed., Table 11.3, Row 3.
+    """
+    if Cr == 0.0:
+        return 1.0 - math.exp(-NTU)
+    exp_inner = math.exp(-Cr * NTU**0.78)
+    return 1.0 - math.exp((1.0 / Cr) * NTU**0.22 * (exp_inner - 1.0))
+
+
+def epsilon_NTU_crossflow_one_mixed(NTU: float, Cr: float,
+                                    mixed_side: str = "cold") -> float:
+    """Effectiveness for cross-flow HX with ONE fluid mixed, one unmixed.
+
+    If the mixed side is the cold fluid (C_c mixed, C_h unmixed):
+      ε = (1 - exp(-Cr*(1 - exp(-NTU)))) / Cr     (Cr != 0)
+
+    If the mixed side is the hot fluid (C_h mixed, C_c unmixed):
+      ε = 1 - exp(-(1 - exp(-Cr*NTU)) / Cr)       (Cr != 0)
+
+    When Cr = 0 (phase change): ε = 1 - exp(-NTU)
+
+    Ref: Incropera & DeWitt, 7th Ed., Table 11.3, Rows 1 & 2.
+          Kays & London, "Compact Heat Exchangers", 1964.
+    """
+    if Cr == 0.0:
+        return 1.0 - math.exp(-NTU)
+    if mixed_side == "cold":
+        # C_c mixed, C_h unmixed
+        return (1.0 - math.exp(-Cr * (1.0 - math.exp(-NTU)))) / Cr
+    else:
+        # C_h mixed, C_c unmixed
+        return 1.0 - math.exp(-(1.0 - math.exp(-Cr * NTU)) / Cr)
+
+
+def NTU_from_epsilon_crossflow_one_mixed(epsilon: float, Cr: float,
+                                          mixed_side: str = "cold") -> float:
+    """Invert cross-flow (one mixed) ε-NTU to find required NTU.
+
+    For C_c mixed, C_h unmixed:
+      ε = (1 - exp(-Cr*(1-exp(-NTU)))) / Cr
+      => 1 - ε*Cr = exp(-Cr*(1-exp(-NTU)))
+      => ln(1-ε*Cr)/(-Cr) = 1 - exp(-NTU)
+      => exp(-NTU) = 1 + ln(1-ε*Cr)/Cr
+      => NTU = -ln[1 + ln(1-ε*Cr)/Cr]
+
+    For C_h mixed, C_c unmixed:
+      ε = 1 - exp(-(1-exp(-Cr*NTU))/Cr)
+      => ln(1-ε) = -(1-exp(-Cr*NTU))/Cr
+      => exp(-Cr*NTU) = 1 + Cr*ln(1-ε)
+      => NTU = -ln[1 + Cr*ln(1-ε)] / Cr
+
+    Ref: Incropera & DeWitt, 7th Ed., Table 11.3.
+    """
+    if epsilon <= 0 or epsilon >= 1:
+        raise ValueError(f"epsilon must be in (0, 1), got {epsilon}")
+    if mixed_side == "cold":
+        inner = 1.0 + math.log(1.0 - epsilon * Cr) / Cr
+        if inner <= 0:
+            raise ValueError("Cannot invert: argument of log is non-positive.")
+        return -math.log(inner)
+    else:
+        inner = 1.0 + Cr * math.log(1.0 - epsilon)
+        if inner <= 0:
+            raise ValueError("Cannot invert: argument of log is non-positive.")
+        return -math.log(inner) / Cr
+
+
+def epsilon_NTU_crossflow_both_unmixed_exact(NTU: float, Cr: float) -> float:
+    """Exact ε for cross-flow, both fluids unmixed (series solution).
+
+    ε = 1 - exp(-NTU) * Σ_{n=0}^{∞} [Cr^n * NTU^n / (n!)^2 *
+         Σ_{k=0}^{n} 1/(n-k+1) * (-1)^k * C(n,k) * exp(k*NTU)]
+
+    Simplified to 50-term summation for accuracy.
+    Ref: Kays & London, "Compact Heat Exchangers", 1964.
+    """
+    if Cr == 0.0:
+        return 1.0 - math.exp(-NTU)
+    total = 0.0
+    for n in range(50):
+        inner = 0.0
+        for k in range(n + 1):
+            binom = math.comb(n, k)
+            sign = (-1) ** k
+            inner += sign * binom * math.exp(k * NTU) / (n - k + 1)
+        total += (Cr ** n) * (NTU ** n) / (math.factorial(n) ** 2) * inner
+    return 1.0 - math.exp(-NTU) * total
 
 
 # ---------------------------------------------------------------------------
