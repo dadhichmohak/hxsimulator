@@ -768,37 +768,43 @@ if st.session_state.get("show_howto", False):
     }
     .howto-card a { color: #818cf8; text-decoration: none; }
     .howto-card a:hover { text-decoration: underline; }
-    .howto-card .dismiss-btn {
-        display: inline-block; margin-top: 20px; padding: 8px 24px;
-        background: linear-gradient(135deg,#6366f1,#8b5cf6);
-        border: none; border-radius: 8px; color: white; font-weight: 600;
-        cursor: pointer; font-size: 0.85rem;
-    }
     </style>
     """
     st.markdown(HOWTO_CSS, unsafe_allow_html=True)
-    st.markdown("""
-    <div class="howto-overlay" id="howto-overlay">
-        <div class="howto-card">
-            <h2>📖 How to Use HX Simulator</h2>
-            <ol>
-                <li><span class="step-num">1</span> <strong>Choose mode</strong> in the sidebar — <em>Rating</em> (analyze existing HX) or <em>Design</em> (size a new HX)</li>
-                <li><span class="step-num">2</span> <strong>Select HX type</strong> — Double-pipe or Shell-and-tube</li>
-                <li><span class="step-num">3</span> <strong>Set hot & cold fluids</strong> — pick from built-in fluids (water, air, oil) or define custom properties</li>
-                <li><span class="step-num">4</span> <strong>Enter geometry</strong> — tube diameters, length, number of tubes, baffle settings (shell-and-tube)</li>
-                <li><span class="step-num">5</span> <strong>Click "Run Simulation"</strong> — results appear instantly with animated HX visualization</li>
-                <li><span class="step-num">6</span> <strong>Explore tabs</strong> — Temperatures, Heat Transfer, Pressure Drop, FIV, Cost, Fouling, Nozzles, Charts, Export</li>
-            </ol>
-            <p style="font-size:0.8rem;color:#64748b;margin-top:12px;">
-                Full source verification and references available in the sidebar →
-                <a href="https://github.com/dadhichmohak/hxsimulator" target="_blank">GitHub Repo</a>
-            </p>
+
+    hx_close, hx_title = st.columns([1, 10])
+    with hx_close:
+        if st.button("✕", key="close_howto", help="Close"):
+            st.session_state.show_howto = False
+            st.rerun()
+    with hx_title:
+        st.markdown("")
+        st.markdown("""
+        <div style="padding:4px 0;">
+            <h2 style="margin:0;font-size:1.3rem;font-weight:800;
+                background:linear-gradient(135deg,#6366f1,#a78bfa);
+                -webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+                📖 How to Use HX Simulator
+            </h2>
         </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style="font-family:'Inter',system-ui,sans-serif;color:#f1f5f9;">
+    <ol style="padding-left:20px;line-height:1.9;font-size:0.88rem;color:#94a3b8;">
+        <li style="margin-bottom:6px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:rgba(99,102,241,0.15);color:#a78bfa;font-size:0.72rem;font-weight:700;margin-right:6px;">1</span> <strong style="color:#f1f5f9;">Choose mode</strong> in the sidebar — <em>Rating</em> (analyze existing HX) or <em>Design</em> (size a new HX)</li>
+        <li style="margin-bottom:6px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:rgba(99,102,241,0.15);color:#a78bfa;font-size:0.72rem;font-weight:700;margin-right:6px;">2</span> <strong style="color:#f1f5f9;">Select HX type</strong> — Double-pipe or Shell-and-tube</li>
+        <li style="margin-bottom:6px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:rgba(99,102,241,0.15);color:#a78bfa;font-size:0.72rem;font-weight:700;margin-right:6px;">3</span> <strong style="color:#f1f5f9;">Set hot & cold fluids</strong> — pick from built-in fluids (water, air, oil) or define custom properties</li>
+        <li style="margin-bottom:6px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:rgba(99,102,241,0.15);color:#a78bfa;font-size:0.72rem;font-weight:700;margin-right:6px;">4</span> <strong style="color:#f1f5f9;">Enter geometry</strong> — tube diameters, length, number of tubes, baffle settings (shell-and-tube)</li>
+        <li style="margin-bottom:6px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:rgba(99,102,241,0.15);color:#a78bfa;font-size:0.72rem;font-weight:700;margin-right:6px;">5</span> <strong style="color:#f1f5f9;">Click "Run Simulation"</strong> — results appear instantly with animated HX visualization</li>
+        <li style="margin-bottom:6px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:rgba(99,102,241,0.15);color:#a78bfa;font-size:0.72rem;font-weight:700;margin-right:6px;">6</span> <strong style="color:#f1f5f9;">Explore tabs</strong> — Temperatures, Heat Transfer, Pressure Drop, FIV, Cost, Fouling, Nozzles, Charts, Export</li>
+    </ol>
+    <p style="font-size:0.8rem;color:#64748b;margin-top:12px;">
+        Full source verification and references available in the sidebar →
+        <a href="https://github.com/dadhichmohak/hxsimulator" target="_blank" style="color:#818cf8;">GitHub Repo</a>
+    </p>
     </div>
     """, unsafe_allow_html=True)
-    if st.button("Got it", key="dismiss_howto"):
-        st.session_state.show_howto = False
-        st.rerun()
 
 # ── Hero Header ──
 st.markdown("""
